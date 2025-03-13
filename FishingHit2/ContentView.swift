@@ -1,6 +1,7 @@
 import SwiftUI
 import CoreData
 import MapKit
+import WebKit
 import PhotosUI
 
 #Preview {
@@ -22,12 +23,12 @@ struct ContentView: View {
             FishGuideView()
                 .tabItem { Label("Guide", systemImage: "fish") }
                 .tag(2)
+            SupportPage()
+                .tabItem { Label("Support", systemImage: "questionmark.circle") }
+                .tag(3)
 //            ARFishView()
 //                .tabItem { Label("AR", systemImage: "camera") }
 //                .tag(3)
-        }
-        .onAppear {
-            print("Приложение запущено, выбран таб: \(selectedTab)")
         }
         .accentColor(.yellow)
     }
@@ -52,6 +53,7 @@ struct FishingMapView: View {
     @State private var showFilters = false
     @State private var filterWaterType: WaterType = .all
     @State private var filterFishType: String = ""
+    @State private var showSupport = false
     
     enum WaterType: String, CaseIterable { case all = "All", freshwater = "Freshwater", saltwater = "Saltwater" }
     
@@ -197,7 +199,16 @@ struct FishingDiaryView: View {
                 }
                 .onTapGesture {
                     selectedCatch = catched
-                    showCatchDetail = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        showCatchDetail = true
+                    }
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        deleteCatch(catched)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
                 }
             }
             .background(Color.seaDark)
@@ -214,11 +225,18 @@ struct FishingDiaryView: View {
             .sheet(isPresented: $showCatchDetail) {
                 if let selectedCatch = selectedCatch {
                     CatchDetailView(catched: selectedCatch)
-                        .environment(\.managedObjectContext, viewContext) // Передаем контекст для сохранения заметки
+                        .environment(\.managedObjectContext, viewContext)
                 }
             }
-            .onAppear {
-                print("Loaded catches: \(catches.count)")
+        }
+    }
+    
+    private func deleteCatch(_ catched: FishCatch) {
+        withAnimation {
+            viewContext.delete(catched)
+            do {
+                try viewContext.save()
+            } catch {
             }
         }
     }
@@ -493,6 +511,181 @@ struct FishInfo: Identifiable {
     let bait: String
     let season: String
     let description: String
+}
+
+struct SupportPage: View {
+    @Environment(\.dismiss) var dismiss
+    @State var privacyPolicySheet = false
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Заголовок
+                    Text("Support for Fishing Hit Base")
+                        .font(.largeTitle)
+                        .foregroundColor(.turquoise)
+                        .padding(.top, 20)
+                    
+                    // Описание приложения
+                    Text("Welcome to the Fishing Hit Base Support Page! We're here to help you get the most out of your fishing experience. Below you'll find answers to common questions, contact information, and useful resources.")
+                        .font(.body)
+                        .foregroundColor(.white)
+                    
+                    SectionHeader(title: "Frequently Asked Questions (FAQ)")
+                    
+                    FAQItem(
+                        question: "How do I add a new fishing spot?",
+                        answer: "Go to the Map tab, tap 'Add Spot', enter the details like fish type and depth, and save it. Your spot will appear on the map!"
+                    )
+                    
+                    FAQItem(
+                        question: "Can I use Fishing Hit Base offline?",
+                        answer: "Yes! The diary, fish guide, and saved spots work offline thanks to local storage. Map features require an internet connection unless cached."
+                    )
+                    
+//                    FAQItem(
+//                        question: "How does the AR measuring tool work?",
+//                        answer: "Open the AR tab, point your camera at the fish, and wait for the app to detect feature points. It will display the length in centimeters."
+//                    )
+                    
+                    FAQItem(
+                        question: "How do I edit a catch in the diary?",
+                        answer: "Tap on any catch in the Diary tab to open its details, then edit the note and save your changes."
+                    )
+                    
+                    // Контактная информация
+                    SectionHeader(title: "Contact Us")
+                    
+                    Text("If you need further assistance, feel free to reach out:")
+                        .font(.body)
+                        .foregroundColor(.white)
+                    
+                    ContactItem(label: "Email", value: "support@fishinghit.com")
+
+                    SectionHeader(title: "Resources")
+                    
+                    Text("Check out these links for more information:")
+                        .font(.body)
+                        .foregroundColor(.white)
+
+                    ResourceButton(title: "Privacy Policy", action: {
+                        privacyPolicySheet = true
+                    })
+                    
+                    ResourceButton(title: "Terms of Service", action: {
+                        privacyPolicySheet = true
+                    })
+                }
+                .padding(.horizontal, 20)
+            }
+            .background(Color.seaDark.edgesIgnoringSafeArea(.all))
+            .navigationBarHidden(true)
+            .sheet(isPresented: $privacyPolicySheet) {
+                WebView(urlString: "https://docs.google.com/document/d/1dD2YDtgmaGrSuJfCxL4KDO0Xtz9uKa-VHn7puQCP7Ro/edit?usp=sharing")
+            }
+        }
+    }
+}
+
+struct ResourceButton: View {
+    let title: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.body)
+                .foregroundColor(.yellow)
+        }
+    }
+}
+
+
+struct WebView: UIViewRepresentable {
+    let urlString: String
+
+    func makeUIView(context: Context) -> WKWebView {
+        return WKWebView()
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        if let url = URL(string: urlString) {
+            let request = URLRequest(url: url)
+            webView.load(request)
+        }
+    }
+}
+
+// Вспомогательные компоненты
+struct SectionHeader: View {
+    let title: String
+    
+    var body: some View {
+        Text(title)
+            .font(.title2)
+            .foregroundColor(.turquoise)
+            .padding(.top, 10)
+    }
+}
+
+struct FAQItem: View {
+    let question: String
+    let answer: String
+    @State private var isExpanded = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(question)
+                    .font(.headline)
+                    .foregroundColor(.turquoise)
+                Spacer()
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .foregroundColor(.yellow)
+            }
+            .onTapGesture {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isExpanded.toggle()
+                }
+            }
+            
+            if isExpanded {
+                Text(answer)
+                    .font(.body)
+                    .foregroundColor(.white)
+                    .transition(.opacity)
+            }
+        }
+        .padding(.vertical, 5)
+    }
+}
+
+struct ContactItem: View {
+    let label: String
+    let value: String
+    
+    var body: some View {
+        HStack {
+            Text("\(label):")
+                .font(.body)
+                .foregroundColor(.turquoise)
+            Text(value)
+                .font(.body)
+                .foregroundColor(.white)
+        }
+    }
+}
+
+struct ResourceLink: View {
+    let title: String
+    let url: String
+    
+    var body: some View {
+        Link(title, destination: URL(string: url)!)
+            .font(.body)
+            .foregroundColor(.yellow)
+    }
 }
 
 extension Color {

@@ -11,6 +11,7 @@
 		8FF81FF02D833E280001A80B /* FishCatch+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF81FEB2D833E280001A80B /* FishCatch+CoreDataClass.swift */; };
 		8FF81FF12D833E280001A80B /* FishingSpot+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF81FED2D833E280001A80B /* FishingSpot+CoreDataClass.swift */; };
 		8FF81FF22D833E280001A80B /* FishingSpot+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF81FEE2D833E280001A80B /* FishingSpot+CoreDataProperties.swift */; };
+		8FF8201C2D83841F0001A80B /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 8FF8201B2D83841F0001A80B /* Lottie */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +48,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8FF8201C2D83841F0001A80B /* Lottie in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -93,6 +95,7 @@
 			);
 			name = FishingHit2;
 			packageProductDependencies = (
+				8FF8201B2D83841F0001A80B /* Lottie */,
 			);
 			productName = FishingHit2;
 			productReference = 8FF81FD22D83378E0001A80B /* FishingHit2.app */;
@@ -122,6 +125,9 @@
 			);
 			mainGroup = 8FF81FC92D83378E0001A80B;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				8FF8201A2D83841F0001A80B /* XCRemoteSwiftPackageReference "lottie-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8FF81FD32D83378E0001A80B /* Products */;
 			projectDirPath = "";
@@ -373,6 +379,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		8FF8201A2D83841F0001A80B /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		8FF8201B2D83841F0001A80B /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8FF8201A2D83841F0001A80B /* XCRemoteSwiftPackageReference "lottie-ios" */;
+			productName = Lottie;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 8FF81FCA2D83378E0001A80B /* Project object */;
 }
