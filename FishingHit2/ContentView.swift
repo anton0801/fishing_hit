@@ -2,6 +2,7 @@ import SwiftUI
 import CoreData
 import MapKit
 import WebKit
+import AVKit
 import PhotosUI
 
 #Preview {
@@ -169,45 +170,94 @@ struct AddSpotView: View {
 struct FishingDiaryView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \FishCatch.fishType, ascending: true)],
+        sortDescriptors: [NSSortDescriptor(keyPath: \FishCatch.date, ascending: false)],
         animation: .default)
     private var catches: FetchedResults<FishCatch>
     @State private var showAddCatch = false
-    @State private var selectedCatch: FishCatch? // Для хранения выбранного улова
-    @State private var showCatchDetail = false // Для управления sheet
+    @State private var selectedCatch: FishCatch?
+    @State private var showCatchDetail = false
+    @State private var searchText = ""
+    @State private var filterFishType = ""
+    @State private var filterYear: String = "" // Фильтр по году
+    @State private var showFilters = false
+    
+    var filteredCatches: [FishCatch] {
+        catches.filter { catched in
+            let matchesSearch = searchText.isEmpty || (catched.fishType?.lowercased().contains(searchText.lowercased()) ?? false)
+            let matchesFishType = filterFishType.isEmpty || (catched.fishType == filterFishType)
+            let matchesYear = filterYear.isEmpty || (catched.date?.yearString == filterYear)
+            return matchesSearch && matchesFishType && matchesYear
+        }
+    }
+    
+    var topFishTypes: [String: Int] {
+        Dictionary(grouping: filteredCatches, by: { $0.fishType ?? "Unknown" })
+            .mapValues { $0.count }
+            .sorted(by: { $0.value > $1.value })
+            .prefix(5)
+            .reduce(into: [:]) { $0[$1.key] = $1.value }
+    }
     
     var body: some View {
         NavigationView {
-            List(catches) { catched in
+            VStack {
+                // Поиск и фильтры
                 HStack {
-                    if let imageData = catched.image, !imageData.isEmpty, let uiImage = UIImage(data: imageData) {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .frame(width: 50, height: 50)
-                            .cornerRadius(5)
-                    } else {
-                        Image(systemName: "photo")
-                            .frame(width: 50, height: 50)
-                            .foregroundColor(.turquoise)
+                    TextField("Search by fish type...", text: $searchText)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .foregroundColor(.turquoise)
+                    Button(action: { showFilters.toggle() }) {
+                        Image(systemName: "slider.horizontal.3")
+                            .foregroundColor(.yellow)
                     }
+                }
+                .padding()
+                
+                // Статистика
+                if !topFishTypes.isEmpty {
                     VStack(alignment: .leading) {
-                        Text(catched.fishType ?? "Unknown")
+                        Text("Top 5 Fish Types This Year")
+                            .font(.headline)
                             .foregroundColor(.turquoise)
-                        Text("Weight: \(catched.weight) kg")
-                            .font(.caption)
+                        ForEach(topFishTypes.sorted(by: { $0.value > $1.value }), id: \.key) { fishType, count in
+                            Text("\(fishType): \(count) catches")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                        }
                     }
+                    .padding(.horizontal)
                 }
-                .onTapGesture {
-                    selectedCatch = catched
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        showCatchDetail = true
-                    }
-                }
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        deleteCatch(catched)
-                    } label: {
-                        Label("Delete", systemImage: "trash")
+                
+                // Список уловов
+                List {
+                    ForEach(filteredCatches) { catched in
+                        NavigationLink(destination: CatchDetailView(catched: catched)) {
+                            HStack {
+                                if let imageData = catched.image, !imageData.isEmpty, let uiImage = UIImage(data: imageData) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .frame(width: 50, height: 50)
+                                        .cornerRadius(5)
+                                } else {
+                                    Image(systemName: "photo")
+                                        .frame(width: 50, height: 50)
+                                        .foregroundColor(.turquoise)
+                                }
+                                VStack(alignment: .leading) {
+                                    Text(catched.fishType ?? "Unknown")
+                                        .foregroundColor(.turquoise)
+                                    Text("Weight: \(catched.weight) kg • \(catched.date?.formattedString ?? "No date")")
+                                        .font(.caption)
+                                }
+                            }
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                deleteCatch(catched)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     }
                 }
             }
@@ -228,6 +278,9 @@ struct FishingDiaryView: View {
                         .environment(\.managedObjectContext, viewContext)
                 }
             }
+            .sheet(isPresented: $showFilters) {
+                CatchedFilterView(filterFishType: $filterFishType, filterYear: $filterYear)
+            }
         }
     }
     
@@ -242,20 +295,57 @@ struct FishingDiaryView: View {
     }
 }
 
+// Вспомогательный вид для фильтров
+struct CatchedFilterView: View {
+    @Binding var filterFishType: String
+    @Binding var filterYear: String
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                TextField("Fish Type", text: $filterFishType)
+                TextField("Year (e.g., 2024)", text: $filterYear)
+                    .keyboardType(.numberPad)
+            }
+            .background(Color.seaDark)
+            .foregroundColor(.turquoise)
+            .navigationTitle("Filters")
+            .toolbar {
+                Button("Apply") { dismiss() }
+            }
+        }
+    }
+}
+
+// Расширения для форматирования даты
+extension Date {
+    var formattedString: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter.string(from: self)
+    }
+    
+    var yearString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy"
+        return formatter.string(from: self)
+    }
+}
+
 struct CatchDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) var dismiss
     @ObservedObject var catched: FishCatch
-    @State private var note: String // Для редактирования заметки
+    @State private var note: String
     
     init(catched: FishCatch) {
         self.catched = catched
-        _note = State(initialValue: catched.note ?? "") // Инициализируем заметку из объекта
+        _note = State(initialValue: catched.note ?? "")
     }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            // Фото на полный размер
             if let imageData = catched.image, !imageData.isEmpty, let uiImage = UIImage(data: imageData) {
                 Image(uiImage: uiImage)
                     .resizable()
@@ -270,7 +360,6 @@ struct CatchDetailView: View {
                     .foregroundColor(.turquoise)
             }
             
-            // Информация об улове
             Text(catched.fishType ?? "Unknown")
                 .font(.title)
                 .foregroundColor(.turquoise)
@@ -278,8 +367,19 @@ struct CatchDetailView: View {
                 .font(.body)
             Text("Length: \(catched.length) cm")
                 .font(.body)
+            Text("Date: \(catched.date?.formattedString ?? "No date")")
+                .font(.body)
             
-            // Поле для заметки
+            if let audioURL = catched.audioURL, let url = URL(string: audioURL) {
+                AudioPlayerView(url: url)
+            }
+            
+            if let videoURL = catched.videoURL, let url = URL(string: videoURL) {
+                VideoPlayer(player: AVPlayer(url: url))
+                    .frame(height: 200)
+                    .cornerRadius(10)
+            }
+            
             Text("Note:")
                 .font(.headline)
                 .foregroundColor(.turquoise)
@@ -289,14 +389,12 @@ struct CatchDetailView: View {
                 .cornerRadius(5)
                 .foregroundColor(.white)
             
-            // Кнопка сохранения
             Button("Save Note") {
                 catched.note = note
                 do {
                     try viewContext.save()
                     dismiss()
                 } catch {
-                    print("Failed to save note: \(error)")
                 }
             }
             .font(.headline)
@@ -314,6 +412,33 @@ struct CatchDetailView: View {
     }
 }
 
+struct AudioPlayerView: View {
+    let url: URL
+    @State private var player: AVAudioPlayer?
+    
+    var body: some View {
+        Button(action: {
+            if player?.isPlaying == true {
+                player?.stop()
+            } else {
+                do {
+                    player = try AVAudioPlayer(contentsOf: url)
+                    player?.play()
+                } catch {
+                    print("Failed to play audio: \(error)")
+                }
+            }
+        }) {
+            Text(player?.isPlaying == true ? "Stop Audio" : "Play Audio")
+                .font(.body)
+                .padding()
+                .background(Color.yellow)
+                .foregroundColor(.seaDark)
+                .cornerRadius(10)
+        }
+    }
+}
+
 struct AddCatchView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) var dismiss
@@ -322,7 +447,12 @@ struct AddCatchView: View {
     @State private var length = ""
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var image: UIImage?
-    @State private var note = "" // Новое поле для заметки
+    @State private var note = ""
+    @State private var date = Date() // Новый атрибут для даты
+    @State private var audioURL: String? // Новый атрибут для аудио
+    @State private var videoURL: String? // Новый атрибут для видео
+    @State private var showAudioRecorder = false
+    @State private var showVideoPicker = false
     
     var body: some View {
         NavigationView {
@@ -330,6 +460,7 @@ struct AddCatchView: View {
                 TextField("Fish Type", text: $fishType)
                 TextField("Weight (kg)", text: $weight)
                 TextField("Length (cm)", text: $length)
+                DatePicker("Date", selection: $date, displayedComponents: .date)
                 PhotosPicker("Select Photo", selection: $selectedPhoto, matching: .images)
                 if let image = image {
                     Image(uiImage: image)
@@ -343,6 +474,20 @@ struct AddCatchView: View {
                     .frame(height: 100)
                     .background(Color.gray.opacity(0.2))
                     .cornerRadius(5)
+                Button("Record Audio Note") {
+                    showAudioRecorder = true
+                }
+                if let audioURL = audioURL {
+                    Text("Audio recorded: \(audioURL.split(separator: "/").last ?? "")")
+                        .font(.caption)
+                }
+                Button("Add Video") {
+                    showVideoPicker = true
+                }
+                if let videoURL = videoURL {
+                    Text("Video added: \(videoURL.split(separator: "/").last ?? "")")
+                        .font(.caption)
+                }
             }
             .background(Color.seaDark)
             .foregroundColor(.turquoise)
@@ -353,14 +498,13 @@ struct AddCatchView: View {
                     newCatch.fishType = fishType
                     newCatch.weight = Double(weight) ?? 0
                     newCatch.length = Double(length) ?? 0
-                    if let image = image {
-                        if let imageData = image.jpegData(compressionQuality: 0.8), !imageData.isEmpty {
-                            newCatch.image = imageData
-                        } else {
-                            print("Error: Could not convert image to valid JPEG data")
-                        }
+                    if let image = image, let imageData = image.jpegData(compressionQuality: 0.8), !imageData.isEmpty {
+                        newCatch.image = imageData
                     }
-                    newCatch.note = note // Сохранение заметки
+                    newCatch.note = note
+                    newCatch.date = date
+                    newCatch.audioURL = audioURL
+                    newCatch.videoURL = videoURL
                     do {
                         try viewContext.save()
                         dismiss()
@@ -371,22 +515,106 @@ struct AddCatchView: View {
             }
             .onChange(of: selectedPhoto) { newItem in
                 Task {
-                    guard let item = newItem else { return }
-                    if let data = try? await item.loadTransferable(type: Data.self) {
-                        guard !data.isEmpty, data.count > 0 else {
-                            print("Error: Photo data is empty or invalid")
-                            return
-                        }
-                        if let uiImage = UIImage(data: data) {
-                            image = uiImage
-                        } else {
-                            print("Error: Could not create UIImage from data")
-                        }
-                    } else {
+                    guard let item = newItem, let data = try? await item.loadTransferable(type: Data.self), !data.isEmpty, let uiImage = UIImage(data: data) else {
                         print("Error: Failed to load photo data")
+                        return
                     }
+                    image = uiImage
                 }
             }
+            .sheet(isPresented: $showAudioRecorder) {
+                AudioRecorderView(audioURL: $audioURL)
+            }
+            .sheet(isPresented: $showVideoPicker) {
+                VideoPickerView(videoURL: $videoURL)
+            }
+        }
+    }
+}
+
+// Аудиозапись
+struct AudioRecorderView: View {
+    @Binding var audioURL: String?
+    @Environment(\.dismiss) var dismiss
+    @State private var isRecording = false
+    @State private var audioRecorder: AVAudioRecorder?
+    
+    var body: some View {
+        VStack {
+            Button(isRecording ? "Stop Recording" : "Start Recording") {
+                if isRecording {
+                    audioRecorder?.stop()
+                    dismiss()
+                } else {
+                    startRecording()
+                }
+                isRecording.toggle()
+            }
+            .font(.headline)
+            .padding()
+            .background(isRecording ? Color.red : Color.yellow)
+            .foregroundColor(.seaDark)
+            .cornerRadius(10)
+        }
+        .background(Color.seaDark)
+    }
+    
+    private func startRecording() {
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            try audioSession.setCategory(.playAndRecord, mode: .default)
+            try audioSession.setActive(true)
+            let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let audioFilename = documentsPath.appendingPathComponent("catch_\(UUID().uuidString).m4a")
+            let settings = [
+                AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+                AVSampleRateKey: 12000,
+                AVNumberOfChannelsKey: 1,
+                AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+            ]
+            audioRecorder = try AVAudioRecorder(url: audioFilename, settings: settings)
+            audioRecorder?.record()
+            audioURL = audioFilename.path
+        } catch {
+            print("Failed to start recording: \(error)")
+        }
+    }
+}
+
+// Выбор видео
+struct VideoPickerView: UIViewControllerRepresentable {
+    @Binding var videoURL: String?
+    @Environment(\.dismiss) var dismiss
+    
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.delegate = context.coordinator
+        picker.sourceType = .photoLibrary
+        picker.mediaTypes = ["public.movie"]
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: VideoPickerView
+        
+        init(_ parent: VideoPickerView) {
+            self.parent = parent
+        }
+        
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            if let url = info[.mediaURL] as? URL {
+                let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                let destinationURL = documentsPath.appendingPathComponent("catch_video_\(UUID().uuidString).mov")
+                try? FileManager.default.copyItem(at: url, to: destinationURL)
+                parent.videoURL = destinationURL.path
+            }
+            parent.dismiss()
         }
     }
 }
@@ -448,39 +676,114 @@ struct FishGuideView: View {
     ]
     @State private var selectedFish: FishInfo?
     @State private var showFishDetail = false
+    @State private var searchText = ""
+    @AppStorage("favoriteFish") private var favoriteFishJSON: String = "[]"
+    
+    private var favoriteFish: [String] {
+        get {
+            guard let data = favoriteFishJSON.data(using: .utf8),
+                  let array = try? JSONDecoder().decode([String].self, from: data) else {
+                return []
+            }
+            return array
+        }
+        set {
+            if let jsonData = try? JSONEncoder().encode(newValue),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                favoriteFishJSON = jsonString
+            }
+        }
+    }
+    
+    var filteredFish: [FishInfo] {
+        fishData.filter { fish in
+            searchText.isEmpty || fish.name.lowercased().contains(searchText.lowercased())
+        }
+    }
     
     var body: some View {
         NavigationView {
-            List(fishData) { fish in
-                VStack(alignment: .leading) {
-                    Text(fish.name)
-                        .font(.headline)
-                        .foregroundColor(.turquoise)
-                    Text("Habitat: \(fish.habitat)")
-                        .font(.caption)
-                    Text("Bait: \(fish.bait)")
-                        .font(.caption)
-                    Text("Season: \(fish.season)")
-                        .font(.caption)
-                }
-                .onTapGesture {
-                    selectedFish = fish
-                    showFishDetail = true
+            VStack {
+                TextField("Search fish...", text: $searchText)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .foregroundColor(.turquoise)
+                    .padding()
+                
+                List {
+                    Section(header: Text("Favorites").foregroundColor(.turquoise)) {
+                        ForEach(filteredFish.filter { favoriteFish.contains($0.name) }) { fish in
+                            fishRow(fish)
+                        }
+                    }
+                    Section(header: Text("All Fish").foregroundColor(.turquoise)) {
+                        ForEach(filteredFish.filter { !favoriteFish.contains($0.name) }) { fish in
+                            fishRow(fish)
+                        }
+                    }
                 }
             }
             .background(Color.seaDark)
             .navigationTitle("Fish Guide")
             .sheet(isPresented: $showFishDetail) {
                 if let selectedFish = selectedFish {
-                    FishDetailView(fish: selectedFish)
+                    FishDetailView(
+                        fish: selectedFish,
+                        isFavorite: favoriteFish.contains(selectedFish.name),
+                        onFavoriteToggle: { isFavorite in
+                            updateFavorites(selectedFish: selectedFish, isFavorite: isFavorite)
+                        }
+                    )
                 }
             }
         }
     }
+    
+    private func updateFavorites(selectedFish: FishInfo, isFavorite: Bool) {
+        var updatedFavorites = favoriteFish
+        if isFavorite && !updatedFavorites.contains(selectedFish.name) {
+            updatedFavorites.append(selectedFish.name)
+        } else if !isFavorite {
+            updatedFavorites.removeAll { $0 == selectedFish.name }
+        }
+        if let jsonData = try? JSONEncoder().encode(updatedFavorites),
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+            favoriteFishJSON = jsonString
+        }
+//        favoriteFish = updatedFavorites // Теперь это работает через setter вычисляемого свойства
+    }
+    
+    private func fishRow(_ fish: FishInfo) -> some View {
+        VStack(alignment: .leading) {
+            Text(fish.name)
+                .font(.headline)
+                .foregroundColor(.turquoise)
+            Text("Habitat: \(fish.habitat)")
+                .font(.caption)
+            Text("Bait: \(fish.bait)")
+                .font(.caption)
+            Text("Season: \(fish.season)")
+                .font(.caption)
+        }
+        .onTapGesture {
+            selectedFish = fish
+            showFishDetail = true
+        }
+    }
+    
 }
 
 struct FishDetailView: View {
     let fish: FishInfo
+    let isFavorite: Bool
+    let onFavoriteToggle: (Bool) -> Void
+    @State private var localIsFavorite: Bool
+    
+    init(fish: FishInfo, isFavorite: Bool, onFavoriteToggle: @escaping (Bool) -> Void) {
+        self.fish = fish
+        self.isFavorite = isFavorite
+        self.onFavoriteToggle = onFavoriteToggle
+        _localIsFavorite = State(initialValue: isFavorite)
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -496,6 +799,18 @@ struct FishDetailView: View {
             Text("Description: \(fish.description)")
                 .font(.body)
                 .foregroundColor(.white)
+            
+            Button(action: {
+                localIsFavorite.toggle()
+                onFavoriteToggle(localIsFavorite)
+            }) {
+                Image(systemName: localIsFavorite ? "star.fill" : "star")
+                    .foregroundColor(.yellow)
+                Text(localIsFavorite ? "Remove from Favorites" : "Add to Favorites")
+                    .foregroundColor(.yellow)
+            }
+            .padding()
+            
             Spacer()
         }
         .padding()

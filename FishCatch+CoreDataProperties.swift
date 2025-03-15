@@ -13,6 +13,9 @@ extension FishCatch {
     @NSManaged public var length: Double
     @NSManaged public var image: Data?
     @NSManaged public var note: String?
+    @NSManaged public var date: Date? // Новый атрибут для даты
+    @NSManaged public var audioURL: String? // Новый атрибут для аудио
+    @NSManaged public var videoURL: String? // Новый атрибут для видео
 }
 
 extension FishCatch : Identifiable {
