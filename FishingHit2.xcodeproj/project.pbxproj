@@ -12,6 +12,9 @@
 		8FF81FF12D833E280001A80B /* FishingSpot+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF81FED2D833E280001A80B /* FishingSpot+CoreDataClass.swift */; };
 		8FF81FF22D833E280001A80B /* FishingSpot+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF81FEE2D833E280001A80B /* FishingSpot+CoreDataProperties.swift */; };
 		8FF8201C2D83841F0001A80B /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 8FF8201B2D83841F0001A80B /* Lottie */; };
+		8FF824492D8AE5EE0001A80B /* DGCharts in Frameworks */ = {isa = PBXBuildFile; productRef = 8FF824482D8AE5EE0001A80B /* DGCharts */; };
+		8FF8244E2D8AEB9E0001A80B /* AppsFlyerLib in Frameworks */ = {isa = PBXBuildFile; productRef = 8FF8244D2D8AEB9E0001A80B /* AppsFlyerLib */; };
+		8FF824512D8AEC6D0001A80B /* SwiftyJSON in Frameworks */ = {isa = PBXBuildFile; productRef = 8FF824502D8AEC6D0001A80B /* SwiftyJSON */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,7 +51,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8FF824492D8AE5EE0001A80B /* DGCharts in Frameworks */,
 				8FF8201C2D83841F0001A80B /* Lottie in Frameworks */,
+				8FF824512D8AEC6D0001A80B /* SwiftyJSON in Frameworks */,
+				8FF8244E2D8AEB9E0001A80B /* AppsFlyerLib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -96,6 +102,9 @@
 			name = FishingHit2;
 			packageProductDependencies = (
 				8FF8201B2D83841F0001A80B /* Lottie */,
+				8FF824482D8AE5EE0001A80B /* DGCharts */,
+				8FF8244D2D8AEB9E0001A80B /* AppsFlyerLib */,
+				8FF824502D8AEC6D0001A80B /* SwiftyJSON */,
 			);
 			productName = FishingHit2;
 			productReference = 8FF81FD22D83378E0001A80B /* FishingHit2.app */;
@@ -127,6 +136,9 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				8FF8201A2D83841F0001A80B /* XCRemoteSwiftPackageReference "lottie-ios" */,
+				8FF824472D8AE5EE0001A80B /* XCRemoteSwiftPackageReference "Charts" */,
+				8FF8244C2D8AEB9E0001A80B /* XCRemoteSwiftPackageReference "AppsFlyerFramework" */,
+				8FF8244F2D8AEC6D0001A80B /* XCRemoteSwiftPackageReference "SwiftyJSON" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8FF81FD32D83378E0001A80B /* Products */;
@@ -290,8 +302,11 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FishingHit2/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Allow access to camera";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Allow location access to show distances to fishing spots.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Allow microphone access to record audio notes.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Allow access to photos for video selection.";
+				INFOPLIST_KEY_NSUserTrackingUsageDescription = "We use your data to provide a personalized experience, track app usage, and improve our services. Your information is never shared with third parties for marketing. You can manage your preferences at any time in settings.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -332,8 +347,11 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FishingHit2/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Allow access to camera";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Allow location access to show distances to fishing spots.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Allow microphone access to record audio notes.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Allow access to photos for video selection.";
+				INFOPLIST_KEY_NSUserTrackingUsageDescription = "We use your data to provide a personalized experience, track app usage, and improve our services. Your information is never shared with third parties for marketing. You can manage your preferences at any time in settings.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -393,6 +411,30 @@
 				minimumVersion = 4.5.1;
 			};
 		};
+		8FF824472D8AE5EE0001A80B /* XCRemoteSwiftPackageReference "Charts" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/danielgindi/Charts";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.1.0;
+			};
+		};
+		8FF8244C2D8AEB9E0001A80B /* XCRemoteSwiftPackageReference "AppsFlyerFramework" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/AppsFlyerSDK/AppsFlyerFramework";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.16.2;
+			};
+		};
+		8FF8244F2D8AEC6D0001A80B /* XCRemoteSwiftPackageReference "SwiftyJSON" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SwiftyJSON/SwiftyJSON.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.2;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -400,6 +442,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 8FF8201A2D83841F0001A80B /* XCRemoteSwiftPackageReference "lottie-ios" */;
 			productName = Lottie;
+		};
+		8FF824482D8AE5EE0001A80B /* DGCharts */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8FF824472D8AE5EE0001A80B /* XCRemoteSwiftPackageReference "Charts" */;
+			productName = DGCharts;
+		};
+		8FF8244D2D8AEB9E0001A80B /* AppsFlyerLib */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8FF8244C2D8AEB9E0001A80B /* XCRemoteSwiftPackageReference "AppsFlyerFramework" */;
+			productName = AppsFlyerLib;
+		};
+		8FF824502D8AEC6D0001A80B /* SwiftyJSON */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8FF8244F2D8AEC6D0001A80B /* XCRemoteSwiftPackageReference "SwiftyJSON" */;
+			productName = SwiftyJSON;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

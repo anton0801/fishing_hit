@@ -1,6 +1,6 @@
 import Foundation
 import CoreData
-
+import CoreLocation
 
 extension FishingSpot {
 
@@ -13,10 +13,13 @@ extension FishingSpot {
     @NSManaged public var fishType: String? // Убедитесь, что это есть
     @NSManaged public var depth: Double
     @NSManaged public var gear: String?
+    @NSManaged public var iconName: String?
 
 
 }
 
 extension FishingSpot : Identifiable {
-
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
 }
